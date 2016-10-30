@@ -1,20 +1,20 @@
 
 /* -------------------------- rotation settings ---------------------------------------*/
 
-#define AZIMUTH_STARTING_POINT_DEFAULT 180      // the starting point in degrees of the azimuthal rotator - only used for initializing EEPROM                                                
+#define AZIMUTH_STARTING_POINT_DEFAULT 0      // the starting point in degrees of the azimuthal rotator - only used for initializing EEPROM
 #define AZIMUTH_ROTATION_CAPABILITY_DEFAULT 450 // the default rotation capability of the rotator in degrees - only used for initializing EEPROM
-/* 
+/*
 
-  Use these commands to change the azimuth starting point and rotation capability if you have already ran the code one which would have 
+  Use these commands to change the azimuth starting point and rotation capability if you have already ran the code one which would have
   initialized the EEPROM:
 
             \Ix[x][x] - set az starting point
             \I - display the current az starting point
             \Jx[x][x] - set az rotation capability
             \J - display the current az rotation capability
-            \Q - Save settings in the EEPROM and restart            
-*/   
-                                                
+            \Q - Save settings in the EEPROM and restart
+*/
+
 #define ELEVATION_MAXIMUM_DEGREES 180           // change this to set the maximum elevation in degrees
 
 /* --------------------------- Settings ------------------------------------------------
@@ -33,7 +33,7 @@ You can tweak these, but read the online documentation!
                                               // you must use raw azimuth (if the azimuth on the rotator crosses over to 0 degrees, add 360
                                               // for example, on a Yaesu 450 degree rotator with a starting point of 180 degrees, and an overlap LED
                                               // turning on when going CW and crossing 180, ANALOG_AZ_OVERLAP_DEGREES should be set for 540 (180 + 360)
-#define OPTION_OVERLAP_LED_BLINK_MS 100                                             
+#define OPTION_OVERLAP_LED_BLINK_MS 100
 
 // PWM speed voltage settings
 #define PWM_SPEED_VOLTAGE_X1  64         // 0 to 255
@@ -222,7 +222,7 @@ You can tweak these, but read the online documentation!
 #define MOON_AOS_ELEVATION_MIN 0
 #define MOON_AOS_ELEVATION_MAX 180
 
- 
+
 #define SUN_TRACKING_CHECK_INTERVAL 5000
 #define SUN_AOS_AZIMUTH_MIN 0
 #define SUN_AOS_AZIMUTH_MAX 360
@@ -321,7 +321,7 @@ You can tweak these, but read the online documentation!
 #define POLOLU_LSM_303_MAX_ARRAY {+909, +491, +14}
 
 #define AUTOCORRECT_TIME_MS_AZ 1000
-#define AUTOCORRECT_TIME_MS_EL 1000 
+#define AUTOCORRECT_TIME_MS_EL 1000
 
 
 
@@ -330,13 +330,13 @@ You can tweak these, but read the online documentation!
 
 
  Object declarations are required for several devices, including LCD displays, compass devices, and accelerometers
-   
+
 
 */
 /*
 #if defined(FEATURE_4_BIT_LCD_DISPLAY) || defined(FEATURE_ADAFRUIT_I2C_LCD) || defined(FEATURE_YOURDUINO_I2C_LCD) || defined(FEATURE_YWROBOT_I2C_DISPLAY)
   K3NGdisplay k3ngdisplay(LCD_COLUMNS,LCD_ROWS,LCD_UPDATE_TIME);
-#endif   
+#endif
 
 #ifdef FEATURE_AZ_POSITION_HMC5883L
   HMC5883L compass;

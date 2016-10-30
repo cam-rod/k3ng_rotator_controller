@@ -23,7 +23,7 @@
 // #define FEATURE_YWROBOT_I2C_DISPLAY
 // #define FEATURE_SAINSMART_I2C_LCD
 
-// #define FEATURE_ADAFRUIT_BUTTONS                
+// #define FEATURE_ADAFRUIT_BUTTONS
 
 
 
@@ -40,10 +40,10 @@
 #endif
 #ifdef HARDWARE_TEST
   #include "rotator_features_test.h"
-#endif    
+#endif
 #if !defined(HARDWARE_CUSTOM)
-  #include "rotator_features.h" 
-#endif   
+  #include "rotator_features.h"
+#endif
 
 #ifdef HARDWARE_EA4TX_ARS_USB
   #include "rotator_pins_ea4tx_ars_usb.h"
@@ -74,8 +74,8 @@
 #define TEXT_BLINK_MS 500
 #define WORK_STRING_SIZE 32
 
-#define I2C_LCD_COLOR WHITE            // default color of I2C LCD display, including Adafruit and Yourduino; some Yourduino units may want this as LED_ON                  
-// #define I2C_LCD_COLOR GREEN                  
+#define I2C_LCD_COLOR WHITE            // default color of I2C LCD display, including Adafruit and Yourduino; some Yourduino units may want this as LED_ON
+// #define I2C_LCD_COLOR GREEN
 // #define I2C_LCD_COLOR LED_ON
 
 class K3NGdisplay {
@@ -112,11 +112,11 @@ public:
     void print_top_left(char * print_string);
     void print_top_right(char * print_string);
     void print_bottom_left(char * print_string);
-    void print_bottom_right(char * print_string); 
+    void print_bottom_right(char * print_string);
 
     /* print a timed message in the center of the screen; this can be multiline */
 
-    void print_center_timed_message(char * print_string,int ms_to_display);  
+    void print_center_timed_message(char * print_string,int ms_to_display);
     void print_center_timed_message(char * print_string,int ms_to_display,uint8_t text_attribute);  // TODO - add multiline timed attribute prints
     void print_center_timed_message(char * print_string,char * print_string2,int ms_to_display);
     void print_center_timed_message(char * print_string,char * print_string2,char * print_string3,int ms_to_display);
@@ -130,7 +130,7 @@ public:
 
     #if defined(FEATURE_ADAFRUIT_BUTTONS)
       uint8_t readButtons();
-    #endif   
+    #endif
 
 private:
 
@@ -146,4 +146,3 @@ private:
 };
 
 #endif //_K3NGDISPLAY_H
-

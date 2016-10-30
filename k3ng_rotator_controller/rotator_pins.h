@@ -1,4 +1,4 @@
-/* -------------------------------------   Pin Definitions ------------------------------------------ 
+/* -------------------------------------   Pin Definitions ------------------------------------------
 
   You need to look at these and set them appropriately !
 
@@ -11,7 +11,7 @@
 /* azimuth pins --------------------- (use just the azimuth pins for an azimuth-only rotator) */
 
 #define rotate_cw 6              // goes high to activate rotator R (CW) rotation - pin 1 on Yaesu connector
-#define rotate_ccw 7             // goes high to activate rotator L (CCW) rotation - pin 2 on Yaesu connector
+#define rotate_ccw 8             // goes high to activate rotator L (CCW) rotation - pin 2 on Yaesu connector
 #define rotate_cw_ccw  0         // goes high for both CW and CCW rotation
 #define rotate_cw_pwm 0          // optional - PWM CW output - set to 0 to disable (must be PWM capable pin)
 #define rotate_ccw_pwm 0         // optional - PWM CCW output - set to 0 to disable (must be PWM capable pin)
@@ -37,7 +37,7 @@
 
 /*----------- elevation pins --------------*/
 #ifdef FEATURE_ELEVATION_CONTROL
-  #define rotate_up 8               // goes high to activate rotator elevation up
+  #define rotate_up 7               // goes high to activate rotator elevation up
   #define rotate_down 9             // goes high to activate rotator elevation down
   #define rotate_up_or_down 0       // goes high when elevation up or down is activated
   #define rotate_up_pwm 0           // optional - PWM UP output - set to 0 to disable (must be PWM capable pin)
@@ -54,12 +54,12 @@
 #endif //FEATURE_ELEVATION_CONTROL
 
 // rotary encoder pins and options
-#ifdef FEATURE_AZ_PRESET_ENCODER 
+#ifdef FEATURE_AZ_PRESET_ENCODER
   #define az_rotary_preset_pin1 0                     // CW Encoder Pin
   #define az_rotary_preset_pin2 0                     // CCW Encoder Pin
 #endif //FEATURE_AZ_PRESET_ENCODER
 
-#ifdef FEATURE_EL_PRESET_ENCODER 
+#ifdef FEATURE_EL_PRESET_ENCODER
   #define el_rotary_preset_pin1 0                     // UP Encoder Pin
   #define el_rotary_preset_pin2 0                     // DOWN Encoder Pin
 #endif //FEATURE_EL_PRESET_ENCODER
@@ -196,7 +196,7 @@
 
 #if defined(FEATURE_AZ_POSITION_A2_ABSOLUTE_ENCODER) || defined(FEATURE_EL_POSITION_A2_ABSOLUTE_ENCODER)
   #define pin_sei_bus_busy 24
-  #define pin_sei_bus_send_receive 22  
+  #define pin_sei_bus_send_receive 22
 #endif
 
 #ifdef FEATURE_YWROBOT_I2C_DISPLAY
@@ -209,6 +209,5 @@
   #define ywrobot_pin_d6 6
   #define ywrobot_pin_d7 7
   #define ywrobot_pin_bl 3
-  #define ywrobot_blpol POSITIVE             
+  #define ywrobot_blpol POSITIVE
 #endif //FEATURE_YWROBOT_I2C_DISPLAY
-
