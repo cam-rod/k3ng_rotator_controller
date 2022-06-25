@@ -1,7 +1,7 @@
 
 /* -------------------------- rotation settings ---------------------------------------*/
 
-#define AZIMUTH_STARTING_POINT_EEPROM_INITIALIZE 180      // the starting point in degrees of the azimuthal rotator - only used for initializing EEPROM the first time the code is run                                               
+#define AZIMUTH_STARTING_POINT_EEPROM_INITIALIZE 0      // the starting point in degrees of the azimuthal rotator - only used for initializing EEPROM the first time the code is run                                               
 #define AZIMUTH_ROTATION_CAPABILITY_EEPROM_INITIALIZE 450 // the default rotation capability of the rotator in degrees - only used for initializing EEPROM the first time the code is run
 
 /* 
@@ -30,10 +30,10 @@ You can tweak these, but read the online documentation!
 // or set via the \?AO (Aplha Oscar), \?AF, \?EO (Echo Oscar), \?EF commands 
 // these correspond with the analog input voltage
 //  a value of 1 is approximately 0 volts, a value of 1024 is approximately 5 volts (or 3.3 volts on some boards)
-#define ANALOG_AZ_FULL_CCW_EEPROM_INITIALIZE 1
-#define ANALOG_AZ_FULL_CW_EEPROM_INITIALIZE 1023
-#define ANALOG_EL_FULL_DOWN_EEPROM_INITIALIZE 1
-#define ANALOG_EL_FULL_UP_EEPROM_INITIALIZE 1023
+#define ANALOG_AZ_FULL_CCW_EEPROM_INITIALIZE 4
+#define ANALOG_AZ_FULL_CW_EEPROM_INITIALIZE 1009
+#define ANALOG_EL_FULL_DOWN_EEPROM_INITIALIZE 2
+#define ANALOG_EL_FULL_UP_EEPROM_INITIALIZE 1018
 
 #define ANALOG_AZ_OVERLAP_DEGREES 540         // if overlap_led above is enabled, turn on overlap led line if azimuth is greater than this setting
                                               // you must use raw azimuth (if the azimuth on the rotator crosses over to 0 degrees, add 360
@@ -80,9 +80,9 @@ You can tweak these, but read the online documentation!
 
 // Variable frequency output settings and FEATURE_STEPPER_MOTOR settings
 #define AZ_VARIABLE_FREQ_OUTPUT_LOW   31    // Frequency in hertz of minimum speed (rotate_cw_freq, rotate_ccw_freq minimum value: 31 !)
-#define AZ_VARIABLE_FREQ_OUTPUT_HIGH 1000   // Frequency in hertz of maximum speed (FEATURE_STEPPER_MOTOR maximum value 2000 unless you change OPTION_STEPPER_MOTOR_MAX_X_KHZ in features file)
+#define AZ_VARIABLE_FREQ_OUTPUT_HIGH 5000   // Frequency in hertz of maximum speed (FEATURE_STEPPER_MOTOR maximum value 2000 unless you change OPTION_STEPPER_MOTOR_MAX_X_KHZ in features file)
 #define EL_VARIABLE_FREQ_OUTPUT_LOW   31    // Frequency in hertz of minimum speed (rotate_up_freq, rotate_down_freq minimum value: 31 !)
-#define EL_VARIABLE_FREQ_OUTPUT_HIGH 1000   // Frequency in hertz of maximum speed (FEATURE_STEPPER_MOTOR maximum value: 2000 unless you change OPTION_STEPPER_MOTOR_MAX_X_KHZ in features file)
+#define EL_VARIABLE_FREQ_OUTPUT_HIGH 100   // Frequency in hertz of maximum speed (FEATURE_STEPPER_MOTOR maximum value: 2000 unless you change OPTION_STEPPER_MOTOR_MAX_X_KHZ in features file)
 
 // Settings for OPTION_AZ_MANUAL_ROTATE_LIMITS
 #define AZ_MANUAL_ROTATE_CCW_LIMIT 0   // if using a rotator that starts at 180 degrees, set this to something like 185
@@ -195,8 +195,8 @@ You can tweak these, but read the online documentation!
 
 #define SERIAL_LED_TIME_MS 250
 
-#define DEFAULT_LATITUDE 40.889958
-#define DEFAULT_LONGITUDE -75.585972
+#define DEFAULT_LATITUDE 44.65114
+#define DEFAULT_LONGITUDE -79.80128
 
 #define MOON_TRACKING_CHECK_INTERVAL 5000 // This is only written to the configuration upon first boot of the code or when EEPROM_MAGIC_NUMBER is changed in rotator.h
 #define MOON_AOS_AZIMUTH_MIN 0
