@@ -24,7 +24,7 @@ def program_tle(tle, sat_name, port):
             active_attr[4] = termios.B9600
             active_attr[5] = termios.B9600
             active_attr[6][termios.VMIN] = 0
-            active_attr[6][termios.VTIME] = 20 # Wait until data is received, with 2-second timeout
+            active_attr[6][termios.VTIME] = 50 # Wait until data is received, with 2-second timeout
             termios.tcsetattr(dev_fd, termios.TCSAFLUSH, active_attr)
 
             tle_tx(dev_fd, tle, sat_name)
@@ -35,37 +35,43 @@ def program_tle(tle, sat_name, port):
 
     return
 
-def tle_tx(dev_fd, sat_name, tle):
+def tle_tx(dev_fd, tle, sat_name):
     # Flush any leftover commands
     os.write(dev_fd, "\n".encode('utf-8')) 
-    os.read(dev_fd, 1000)
 
     # Start TLE write
     os.write(dev_fd, "\#\n".encode('utf-8'))
-    os.read(dev_fd, 1000)
+    termios.tcflush(dev_fd, termios.TCIFLUSH)
     os.write(dev_fd, tle.encode('utf-8'))
-    os.write(dev_fd, '\n'.encode('utf-8')) # End write
+    os.write(dev_fd, '\n\n'.encode('utf-8')) # End write
 
     # Confirm TLE saved
     result = os.read(dev_fd, 1000)
-    if result.find("TLE corrupt".encode('utf-8')):
+    if b"TLE corrupt" in result:
         print("ERROR: TLE was corrupted.\n===START OF TLE===")
         print(tle)
         print("===END OF TLE===")
+        print(result)
         return
-    if result.find("File was truncated"):
-        print("ERROR: File was truncated doe to lack of EEPROM storage.")
+    if b"File was truncated" in result:
+        print("ERROR: File was truncated due to lack of EEPROM storage.")
         return
-    if result.find(sat_name) == -1:
+    if sat_name.encode('utf-8') not in result:
         print("ERROR: TLE was not loaded.\n===START OF DUMP")
         print(result)
         print("===END OF DUMP===")
         return
 
+    termios.tcflush(dev_fd, termios.TCIFLUSH)
     os.write("\@\n".encode('utf-8'))
     result = os.read(dev_fd, 1000)
-    if result.find(sat_name):
+    if sat_name.encode('utf-8') in result:
         print("TLE load successful.")
+        return
+    else:
+        print("TLE could not be located in the EEPROM file.\n===START OF DUMP")
+        print(result)
+        print("===END OF DUMP===")
         return
 
 

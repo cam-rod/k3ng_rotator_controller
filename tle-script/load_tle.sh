@@ -1,6 +1,9 @@
 #!/bin/bash
 
-# Format: load_tle.sh [NORAD_cat_id, like 41168] [port, like ttyACM0]
+if [[ $# -ne 2 ]]; then
+    echo "Format: load_tle.sh [NORAD_cat_id, like 41168] [port, like ttyACM0]" >&2
+    exit 2
+fi
 sudo chmod a+rw /dev/$2
 tle_json=$(curl "https://db.satnogs.org/api/tle/?format=json&norad_cat_id=$1")
 python3 load_tle.py "$tle_json" $2
