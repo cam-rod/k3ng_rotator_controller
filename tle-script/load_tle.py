@@ -13,6 +13,7 @@ def parse_json(satnogs_str):
 
 # Derived from https://blog.mbedded.ninja/programming/operating-systems/linux/linux-serial-ports-using-c-cpp/
 def program_tle(tle, sat_name, port):
+    print("\nTLE:\n" + tle + "\n")
     dev_filepath = "/dev/" + port
     try:
         dev_fd = os.open(dev_filepath, os.O_RDWR | os.O_NOCTTY | os.O_SYNC)
@@ -23,8 +24,8 @@ def program_tle(tle, sat_name, port):
             active_attr = termios.tcgetattr(dev_fd)
             active_attr[4] = termios.B9600
             active_attr[5] = termios.B9600
-            active_attr[6][termios.VMIN] = 0
-            active_attr[6][termios.VTIME] = 50 # Wait until data is received, with 2-second timeout
+            active_attr[6][termios.VMIN] = 12
+            active_attr[6][termios.VTIME] = 5 # Wait until data is received, with 0.5-second inter-char wait
             termios.tcsetattr(dev_fd, termios.TCSAFLUSH, active_attr)
 
             tle_tx(dev_fd, tle, sat_name)
@@ -37,16 +38,18 @@ def program_tle(tle, sat_name, port):
 
 def tle_tx(dev_fd, tle, sat_name):
     # Flush any leftover commands
-    os.write(dev_fd, "\n".encode('utf-8')) 
+    os.write(dev_fd, "\n".encode('utf-8'))
+    termios.tcflush(dev_fd, termios.TCIOFLUSH) 
 
     # Start TLE write
     os.write(dev_fd, "\#\n".encode('utf-8'))
-    termios.tcflush(dev_fd, termios.TCIFLUSH)
     os.write(dev_fd, tle.encode('utf-8'))
     os.write(dev_fd, '\n\n'.encode('utf-8')) # End write
+    termios.tcdrain(dev_fd)
 
     # Confirm TLE saved
     result = os.read(dev_fd, 1000)
+    print("Result:\n"+ result.decode('utf-8') + "\n")
     if b"TLE corrupt" in result:
         print("ERROR: TLE was corrupted.\n===START OF TLE===")
         print(tle)
@@ -62,9 +65,11 @@ def tle_tx(dev_fd, tle, sat_name):
         print("===END OF DUMP===")
         return
 
-    termios.tcflush(dev_fd, termios.TCIFLUSH)
-    os.write("\@\n".encode('utf-8'))
+    termios.tcflush(dev_fd, termios.TCIOFLUSH)
+    os.write(dev_fd, "\@\n".encode('utf-8'))
+    termios.tcdrain(dev_fd)
     result = os.read(dev_fd, 1000)
+    print("Result2:\n"+ result.decode('utf-8') + "\n")
     if sat_name.encode('utf-8') in result:
         print("TLE load successful.")
         return
