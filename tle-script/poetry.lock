@@ -11,11 +11,8 @@ cp2110 = ["hidapi"]
 
 [metadata]
 lock-version = "1.1"
-python-versions = "^3.10"
-content-hash = "2fc12d2f03828bb30bb3b81f6cdb177899f33fe0e284c880cb60dac6b953846f"
+python-versions = "^3.7"
+content-hash = "59edea66ea105ac01f6740c3394e2fe68bca5cbe974a0e822dc572ddb269b88d"
 
 [metadata.files]
-pyserial = [
-    {file = "pyserial-3.5-py2.py3-none-any.whl", hash = "sha256:c4451db6ba391ca6ca299fb3ec7bae67a5c55dde170964c7a14ceefec02f2cf0"},
-    {file = "pyserial-3.5.tar.gz", hash = "sha256:3c77e014170dfffbd816e6ffc205e9842efb10be9f58ec16d3e8675b4925cddb"},
-]
+pyserial = []
