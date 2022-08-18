@@ -1,7 +1,7 @@
 import json
 from time import sleep
 import sys
-import serial # Converts
+# import serial # Converts
 
 def parse_json(satnogs_str):
     tle_json = json.loads(satnogs_str)
@@ -15,6 +15,18 @@ def parse_json(satnogs_str):
 # Derived from https://blog.mbedded.ninja/programming/operating-systems/linux/linux-serial-ports-using-c-cpp/
 def program_tle(tle, sat_name, port):
     dev_filepath = "/dev/" + port
+
+    with open("./test-result", 'wb') as tr:
+        print("Flushing leftover data...")
+        tr.write("\r".encode('utf-8'))
+        
+        print("Writing TLE...")
+        tr.write("\#\r".encode('utf-8'))
+        tr.write(tle.encode('utf-8'))
+        tr.write("\r\r".encode('utf-8'))
+
+    return
+
 
     with serial.Serial(dev_filepath, 9600, timeout=2, inter_byte_timeout=0.5) as arduino:
         print("Flushing leftover data...")
@@ -68,5 +80,6 @@ if __name__ == "__main__":
     satnogs_str = sys.argv[1]
     ard_port = sys.argv[2]
 
+    print(satnogs_str)
     tle, sat_name = parse_json(satnogs_str)
     program_tle(tle, sat_name, ard_port)
