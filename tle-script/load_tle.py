@@ -18,16 +18,16 @@ def program_tle(tle, sat_name, port):
 
     with serial.Serial(dev_filepath, 9600, timeout=2, inter_byte_timeout=0.5) as arduino:
         print("Flushing leftover data...")
-        arduino.write("\r".encode('utf-8'))
+        arduino.write("\r".encode('ascii'))
         arduino.flush()
-        arduino.reset_input_buffer()
+        arduino.reset_output_buffer()
 
         print("Writing TLE...")
-        arduino.write("\#\r".encode('utf-8'))
-        arduino.write(tle.encode('utf-8'))
-        arduino.write("\r\r".encode('utf-8'))
+        arduino.write("\#\r".encode('ascii'))
+        arduino.write(tle.encode('ascii'))
+        arduino.write("\r\r".encode('ascii'))
         arduino.flush()
-        arduino.reset_input_buffer()
+        arduino.reset_output_buffer()
 
         # Confirm TLE saved
         result = arduino.read(1000)
@@ -40,7 +40,7 @@ def program_tle(tle, sat_name, port):
         if b"File was truncated" in result:
             print("ERROR: File was truncated due to lack of EEPROM storage.")
             return
-        if sat_name.encode('utf-8') not in result:
+        if sat_name.encode('ascii') not in result:
             print("ERROR: TLE was not loaded.\n===START OF DUMP")
             print(result)
             print("===END OF DUMP===")
@@ -49,11 +49,11 @@ def program_tle(tle, sat_name, port):
         arduino.reset_input_buffer()
         arduino.reset_output_buffer()
         print("Verifying...")
-        arduino.write("\@\r".encode('utf-8'))
+        arduino.write("\@\r".encode('ascii'))
         arduino.flush()
-        arduino.reset_input_buffer()
+        arduino.reset_output_buffer()
         result = arduino.read(1000)
-        if sat_name.encode('utf-8') in result:
+        if sat_name.encode('ascii') in result:
             print("TLE load successful.")
             return
         else:
