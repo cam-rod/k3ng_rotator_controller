@@ -8,6 +8,7 @@ authors = ["Cameron Rodriguez <rod.cam2014+dev@gmail.com>"]
 python = "^3.7"
 pyserial = "^3.5"
 requests = "^2.31.0"
+maidenhead = "^1.7.0"
 
 [tool.poetry.group.dev]
 optional = true

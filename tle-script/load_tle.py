@@ -9,7 +9,6 @@ import serial
 import requests
 
 ARD_LINESEP: Final[bytes] = b"\r"
-modified_perms: bool = False
 
 
 class TLE(TypedDict):
@@ -30,7 +29,8 @@ def retrieve_tle(norad_id: int) -> TLE:
     return cast(TLE, resp.json()[0])
 
 
-def configure_port(port: str) -> Path:
+def configure_port(port: str) -> (Path, bool):
+    modified_perms = False
     port_path = Path("/dev") / port
     if not port_path.exists():
         raise FileNotFoundError(port_path)
@@ -51,15 +51,21 @@ def configure_port(port: str) -> Path:
         print(f"Changing permissions on {port_path}")
         curr_mode: int = stat.S_IMODE(os.stat(port_path).st_mode)
         os.chmod(port_path, curr_mode | stat.S_IROTH | stat.S_IWOTH)
-        global modified_perms
         modified_perms = True
 
-    return port_path
+    return port_path, modified_perms
+
+
+def restore_port(port_path: Path, modified_perms: bool) -> None:
+    if modified_perms:
+        print(f"Restoring permissions on {port_path}")
+        curr_mode: int = stat.S_IMODE(os.stat(port_path).st_mode)
+        os.chmod(port_path, curr_mode & ~stat.S_IROTH & ~stat.S_IWOTH)
 
 
 # Derived from https://blog.mbedded.ninja/programming/operating-systems/linux/linux-serial-ports-using-c-cpp/
-def program_tle(tle: TLE, port: str) -> Path:
-    port_path = configure_port(port)
+def program_tle(tle: TLE, port: str) -> None:
+    port_path, modified_perms = configure_port(port)
     sat_name = tle["tle0"].encode("ascii")
 
     with serial.Serial(
@@ -86,14 +92,17 @@ def program_tle(tle: TLE, port: str) -> Path:
             print(tle)
             print("===END OF TLE===")
             print(result)
+            restore_port(port_path, modified_perms)
             return port_path
         if b"File was truncated" in result:
             print("ERROR: File was truncated due to lack of EEPROM storage.")
+            restore_port(port_path, modified_perms)
             return port_path
         if sat_name not in result:
             print("ERROR: TLE was not loaded.\n===START OF DUMP")
             print(result)
             print("===END OF DUMP===")
+            restore_port(port_path, modified_perms)
             return port_path
 
         arduino.reset_input_buffer()
@@ -110,7 +119,7 @@ def program_tle(tle: TLE, port: str) -> Path:
             print(result)
             print("===END OF DUMP===")
 
-        return port_path
+    restore_port(port_path, modified_perms)
 
 
 def main():
@@ -143,11 +152,8 @@ def main():
         + os.linesep
     )
 
-    port_path = program_tle(tle, args.port)
-    if modified_perms:
-        print(f"Restoring permissions on {port_path}")
-        curr_mode: int = stat.S_IMODE(os.stat(port_path).st_mode)
-        os.chmod(port_path, curr_mode & ~stat.S_IROTH & ~stat.S_IWOTH)
+    program_tle(tle, args.port)
 
 
-main()
+if __name__ == "__main__":
+    main()
