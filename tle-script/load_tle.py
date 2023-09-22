@@ -68,7 +68,6 @@ def program_tle(tle: TLE, port: str) -> Path:
         print("Flushing leftover data...")
         arduino.write(ARD_LINESEP)
         arduino.flush()
-        arduino.reset_output_buffer()
 
         print("Writing TLE...")
         arduino.write(b"\\#" + ARD_LINESEP)
@@ -77,7 +76,6 @@ def program_tle(tle: TLE, port: str) -> Path:
         arduino.write(tle["tle2"].encode("ascii") + ARD_LINESEP)
         arduino.write(ARD_LINESEP)
         arduino.flush()
-        arduino.reset_output_buffer()
 
         # Confirm TLE saved
         result = arduino.read(1000)
@@ -96,12 +94,10 @@ def program_tle(tle: TLE, port: str) -> Path:
             print("===END OF DUMP===")
             return port_path
 
-        arduino.reset_input_buffer()
-        arduino.reset_output_buffer()
+        arduino.flush()
         print("Verifying...")
         arduino.write(b"\\@" + ARD_LINESEP)
         arduino.flush()
-        arduino.reset_output_buffer()
         result = arduino.read(1000)
         if sat_name in result:
             print("TLE load successful.")
