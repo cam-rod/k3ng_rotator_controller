@@ -9,14 +9,13 @@ from typing import Optional
 
 import requests
 import serial
-import timezone
 
 
 @dataclass
 class TLE:
     title: str
     line_one: str
-    tine_two: str
+    line_two: str
 
 
 @dataclass
@@ -37,12 +36,9 @@ class Satellite:
         # Some TLE titles start with "0 " (i.e. "0 ISS") and others don't ("ISS")
         # We opt to be consistent and NOT start with "0 ".
         if resp[0]["tle0"][0:1] == "0 ":
-            self.tle.title = resp[0]["tle0"][2:]
+            self.tle = TLE(resp[0]["tle0"][2:], resp[0]["tle1"], resp[0]["tle2"])
         else:
-            self.tle.title = resp[0]["tle0"]
-
-        self.tle.line_one = resp[0]["tle1"]
-        self.tle.line_two = resp[0]["tle2"]
+            self.tle = TLE(resp[0]["tle0"], resp[0]["tle1"], resp[0]["tle2"])
 
         logging.info(f"Retrieved TLE for NORAD ID {self.id}: {self.tle}")
 
@@ -90,17 +86,20 @@ class K3NG:
             line = self.ser.readline()
             line_decoded = line.decode("utf-8")
             response.append(line_decoded.strip())
-        logging.debug("RX: " + response)
+            time.sleep(0.1)
+        logging.debug("RX: " + str(response))
         return response[:-1]
 
     def write(self, cmd: str) -> None:
-        logging.debug("TX: cmd")
+        logging.debug(f"TX: {cmd}")
         self.ser.write((cmd + "\r").encode())
         self.ser.readline()
         self.ser.flush()
+        time.sleep(0.1)
 
     def query(self, cmd) -> str:
         self.write(cmd)
+        time.sleep(0.2)
         return self.read()
 
     def query_extended(self, cmd) -> str:
@@ -133,23 +132,29 @@ class K3NG:
         retval = self.query_extended("CV")
         return retval
 
-    def get_time(self) -> str:
+    def get_time(self) -> datetime:
         retval = self.query("\\C")
-        return retval
+        return datetime.datetime.fromisoformat(retval[0])
 
     def set_time(self, time: Optional[str] = None) -> None:
         if time is None:
             # Determine UTC time now
-            current_time = datetime.now(tz=timezone.utc)
-            time = current_time.strftime("%Y%m%d%H%M%S").encode("ascii")
+            current_time = datetime.datetime.now(tz=datetime.timezone.utc)
+            time = current_time.strftime("%Y%m%d%H%M%S")
             logging.debug(f"Setting to current UTC time: {current_time}")
 
         if len(time) != 14:
             raise ValueError("Invalid time length")
 
-            self.query("\\O" + time)
+        self.query("\\O" + time)
+
+        # TODO: make this check based on the retval
+
+        if abs(self.get_time() - current_time) > datetime.timedelta(seconds=10):
+            raise ValueError("Time did not save!")
 
     def get_loc(self) -> str:
+        # TODO: make this be able to return coords or grid
         return self.query_extended("RG")[0]
 
     def set_loc(self, loc) -> None:
@@ -158,9 +163,12 @@ class K3NG:
 
         self.query("\\G" + loc)
 
+        # TODO: check retval
+
     def save_to_eeprom(self) -> None:
         self.query("\\Q")
         # This command restarts, so we reprime the buffer
+        # TODO: is this the right amount of wait?
         time.sleep(1)
         self.query("\\-")
 
@@ -170,7 +178,8 @@ class K3NG:
 
     def get_elevation(self) -> float:
         ret = self.query_extended("EL")
-        return float(ret)
+        # replace is to accomodate for a quirk in reporting at EL=0
+        return float(ret.replace("0-0.", "00."))
 
     def set_elevation(self, el: float) -> None:
         self.query_extended("GE" + ("%05.2f" % el))
@@ -208,16 +217,28 @@ class K3NG:
     #  ╰──────────────────────────────────────────────────────────╯
 
     def cal_full_up(self) -> None:
-        self.query_extended("EF")
+        ret = self.query_extended("EF")
+        if "OK" not in ret[0]:
+            logging.warning(ret)
+            raise RuntimeError("Failed to calibrate")
 
     def cal_full_down(self) -> None:
-        self.query_extended("EO")
+        ret = self.query_extended("EO")
+        if "OK" not in ret[0]:
+            logging.warning(ret)
+            raise RuntimeError("Failed to calibrate")
 
     def cal_full_cw(self) -> None:
-        self.query_extended("AF")
+        ret = self.query_extended("AF")
+        if "OK" not in ret[0]:
+            logging.warning(ret)
+            raise RuntimeError("Failed to calibrate")
 
     def cal_full_ccw(self) -> None:
-        self.query_extended("AO")
+        ret = self.query_extended("AO")
+        if "OK" not in ret[0]:
+            logging.warning(ret)
+            raise RuntimeError("Failed to calibrate")
 
     #  ╭──────────────────────────────────────────────────────────╮
     #  │                         Features                         │
@@ -225,6 +246,7 @@ class K3NG:
 
     def get_autopark(self) -> str:
         ret = self.query("\\Y")
+        # TODO: return autopark time
         return ret[0]
 
     def set_autopark(self, duration: int) -> str:
@@ -234,6 +256,10 @@ class K3NG:
             return str(self.query("\\Y0"))
         else:
             return self.query("\\Y" + ("%04d" % duration))
+
+        # TODO: check that it worked
+
+    # TODO: set autopark location
 
     def load_tle(self, sat: Satellite) -> None:
         self.write("\\#")
@@ -251,10 +277,54 @@ class K3NG:
             logging.critical("File was truncated due to lack of EEPROM storage.")
             logging.info(ret)
             raise RuntimeError("TLE truncated")
-        if sat.tle.title not in ret:
+        if sat.tle.title not in ret[4]:
             logging.critical("TLE not loaded")
             logging.info(ret)
             raise RuntimeError("TLE not loaded")
 
-    def read_tle(self) -> TLE:
-        pass
+        # TODO: this shouldn't be needed
+        cur_tle = self.read_tles()[0]
+        print(cur_tle)
+        if sat.tle.title != cur_tle.title:
+            raise RuntimeError("TLE not loaded")
+
+    def read_tles(self) -> TLE:
+        ret = self.query("\\@")
+
+        tles = []
+
+        i = 1
+        while ret[i] != "":
+            tles.append(TLE(ret[i], ret[i + 1], ret[i + 2]))
+            i = i + 3
+
+        return tles
+
+    def clear_tles(self) -> None:
+        ret = self.write("\\!")
+        # TODO: check return
+
+    def get_trackable(self) -> str:
+        ret = self.query("\\|")
+        # TODO: parse this shit
+        return ret
+
+    def get_tracking_status(self) -> str:
+        ret = self.query("\\~")
+        # TODO: parse this shit too
+        return ret
+
+    def select_satellite(self, sat: Satellite) -> None:
+        ret = self.query("\\$" + sat.tle.title[0:5])
+        # TODO: parse this shit as well
+
+    def get_next_pass(self) -> str:
+        return self.query("\\%")
+
+    def enable_tracking(self) -> None:
+        self.query("\\^1")
+        # you get the idea
+
+    def disable_tracking(self) -> None:
+        self.query("\\^0")
+        # samesies

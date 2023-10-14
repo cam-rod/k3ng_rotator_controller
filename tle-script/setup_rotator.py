@@ -1,16 +1,13 @@
 import logging
 from argparse import ArgumentParser
 
-from k3ng import K3NG, Satellite
+from k3ng import K3NG
 
 
-def program_tle(sat_id: int, ser_port: str, track: bool) -> None:
+def default_config(ser_port: str, location: str) -> None:
     rot = K3NG(ser_port)
-
-    sat = Satellite(sat_id)
-    rot.load_tle(sat)
-    rot.get_trackable()
-    rot.select_satellite(sat)
+    rot.set_loc(location)
+    rot.set_time()
 
 
 def main():
@@ -24,16 +21,17 @@ def main():
         help="Serial port connected to an Arduino (typically /dev/ttyACM0)",
     )
     parser.add_argument(
-        "norad_id",
-        type=int,
-        help="NORAD ID of a satellite, (ex. use 25544 for the ISS)",
+        "location",
+        type=str,
+        help="Maidenhead grid location of groundstation at subgrid precision",
+        default="FN03hp",
+        nargs="?",
     )
 
     logging.basicConfig(level=logging.DEBUG)
-
     args = parser.parse_args()
 
-    program_tle(args.norad_id, args.port, False)
+    default_config(args.port, args.location)
 
 
 if __name__ == "__main__":
