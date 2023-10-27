@@ -3,12 +3,16 @@ import logging
 import os
 import sys
 import time
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
 import requests
 import serial
+
+SEND_DELAY = 0.03
+RECV_DELAY = 0.03
 
 
 @dataclass
@@ -35,10 +39,13 @@ class Satellite:
 
         # Some TLE titles start with "0 " (i.e. "0 ISS") and others don't ("ISS")
         # We opt to be consistent and NOT start with "0 ".
-        if resp[0]["tle0"][0:1] == "0 ":
+        if resp[0]["tle0"][0:2] == "0 ":
             self.tle = TLE(resp[0]["tle0"][2:], resp[0]["tle1"], resp[0]["tle2"])
         else:
             self.tle = TLE(resp[0]["tle0"], resp[0]["tle1"], resp[0]["tle2"])
+
+        # K3NG doesn't like special characters
+        self.tle.title = re.sub('[^A-Za-z0-9 ]+','', self.tle.title)
 
         logging.info(f"Retrieved TLE for NORAD ID {self.id}: {self.tle}")
 
@@ -69,33 +76,47 @@ class K3NG:
             curr_mode: int = os.stat.S_IMODE(os.stat(self.port).st_mode)
             os.chmod(self.port, curr_mode | os.stat.S_IROTH | os.stat.S_IWOTH)
 
-        self.ser = serial.Serial(ser_port, 9600, timeout=2, inter_byte_timeout=0.5)
+        self.ser = serial.Serial(ser_port, 9600, timeout=1, inter_byte_timeout=0.5)
+        self.flush()
 
         # This is just a dummy command to "prime" the connection
         # IDK why it's needed but the extended commands won't work otherwise
-        self.query("\\-")
+        ret = self.query("\\-")
+        if ret == []:
+            raise RuntimeError("Unable to communicate with rotator")
 
     #  ╭──────────────────────────────────────────────────────────╮
     #  │                     General Commands                     │
     #  ╰──────────────────────────────────────────────────────────╯
 
     def read(self) -> str:
-        line = "0"
         response = []
-        while line != b"":
-            line = self.ser.readline()
-            line_decoded = line.decode("utf-8")
-            response.append(line_decoded.strip())
-            time.sleep(0.1)
+        line = ""
+
+        while self.ser.in_waiting > 0:
+            time.sleep(RECV_DELAY)
+            ch = self.ser.read()
+            ch = ch.decode('utf-8')
+            if ch == '\r' or ch == '\n':
+                response.append(line)
+                line = ""
+            else:
+                line += ch
+
+        response = list(filter(None, response))
+
         logging.debug("RX: " + str(response))
-        return response[:-1]
+        return response
 
     def write(self, cmd: str) -> None:
         logging.debug(f"TX: {cmd}")
-        self.ser.write((cmd + "\r").encode())
+        for i in cmd[0]:
+            time.sleep(SEND_DELAY)
+            self.ser.write(cmd.encode())
+        time.sleep(SEND_DELAY)
+        self.ser.write(("\r").encode())
+        time.sleep(0.2)
         self.ser.readline()
-        self.ser.flush()
-        time.sleep(0.1)
 
     def query(self, cmd) -> str:
         self.write(cmd)
@@ -103,10 +124,13 @@ class K3NG:
         return self.read()
 
     def query_extended(self, cmd) -> str:
+        time.sleep(0.2)
         if len(cmd) < 2 or "\\?" in cmd:
             raise ValueError("Invalid extended command")
 
         self.write("\\?" + cmd)
+        
+        time.sleep(0.2)
 
         try:
             resp = self.read()[0]
@@ -116,6 +140,9 @@ class K3NG:
         status = resp[0:5]
         if "\\!??" in status:
             raise RuntimeError(f"Response error: {resp}")
+
+        if "OK" not in status:
+            raise RuntimeError(f"Invalid response: {resp}")
 
         return resp[6:]
 
@@ -146,12 +173,22 @@ class K3NG:
         if len(time) != 14:
             raise ValueError("Invalid time length")
 
-        self.query("\\O" + time)
+        ret = self.query("\\O" + time)
+        ret = ' '.join(ret[0].split(' ')[3:5])
+        ret_time = datetime.datetime.fromisoformat(ret)
 
-        # TODO: make this check based on the retval
-
-        if abs(self.get_time() - current_time) > datetime.timedelta(seconds=10):
+        if abs(ret_time - current_time) > datetime.timedelta(seconds=10):
             raise ValueError("Time did not save!")
+
+        self.check_time()
+
+    def check_time(self):
+        current_time = datetime.datetime.now(tz=datetime.timezone.utc)
+        ret_time = self.get_time()
+
+        if abs(ret_time - current_time) > datetime.timedelta(seconds=10):
+            logging.warning("Time difference greater than 10 seconds!")
+
 
     def get_loc(self) -> str:
         # TODO: make this be able to return coords or grid
@@ -166,10 +203,10 @@ class K3NG:
         # TODO: check retval
 
     def save_to_eeprom(self) -> None:
-        self.query("\\Q")
+        self.write("\\Q")
         # This command restarts, so we reprime the buffer
-        # TODO: is this the right amount of wait?
         time.sleep(1)
+        self.flush()
         self.query("\\-")
 
     #  ╭──────────────────────────────────────────────────────────╮
@@ -191,17 +228,21 @@ class K3NG:
     def set_azimuth(self, az: float) -> None:
         self.query_extended("GA" + ("%05.2f" % az))
 
-    def rotate_down(self) -> None:
+    def down(self) -> None:
         self.query_extended("RD")
 
-    def rotate_up(self) -> None:
+    def up(self) -> None:
         self.query_extended("RU")
 
-    def rotate_left(self) -> None:
+    def left(self) -> None:
         self.query_extended("RL")
 
-    def rotate_right(self) -> None:
+    ccw = left
+
+    def right(self) -> None:
         self.query_extended("RR")
+
+    cw = right
 
     def stop_azimuth(self) -> None:
         self.query_extended("SA")
@@ -218,74 +259,84 @@ class K3NG:
 
     def cal_full_up(self) -> None:
         ret = self.query_extended("EF")
-        if "OK" not in ret[0]:
-            logging.warning(ret)
-            raise RuntimeError("Failed to calibrate")
 
     def cal_full_down(self) -> None:
         ret = self.query_extended("EO")
-        if "OK" not in ret[0]:
-            logging.warning(ret)
-            raise RuntimeError("Failed to calibrate")
 
     def cal_full_cw(self) -> None:
         ret = self.query_extended("AF")
-        if "OK" not in ret[0]:
-            logging.warning(ret)
-            raise RuntimeError("Failed to calibrate")
 
     def cal_full_ccw(self) -> None:
         ret = self.query_extended("AO")
-        if "OK" not in ret[0]:
-            logging.warning(ret)
-            raise RuntimeError("Failed to calibrate")
 
     #  ╭──────────────────────────────────────────────────────────╮
     #  │                         Features                         │
     #  ╰──────────────────────────────────────────────────────────╯
 
-    def get_autopark(self) -> str:
-        ret = self.query("\\Y")
-        # TODO: return autopark time
-        return ret[0]
+    def park(self) -> None:
+        ret = self.query("\\P")
+        if "Parking" not in ret[0]:
+            raise RuntimeError("Not parking")
 
-    def set_autopark(self, duration: int) -> str:
+
+
+    def get_autopark(self) -> int:
+        ret = self.query("\\Y")
+        if ("Autopark is off" in ret[0]):
+            return 0
+        else:
+            return int(ret[0].split()[4])
+
+    # WARNING: autopark updates itself every few seconds. ADC drift may cause the rotator to slightly adjust itself between updates, meaning this parked in location (mostly), but not in lack of motion. 
+    def set_autopark(self, duration: int) -> None:
         # set to 0 for disable
         # duration in mins
         if duration == 0:
-            return str(self.query("\\Y0"))
+            ret = str(self.query("\\Y0"))
+            if not "off" in ret:
+                raise RuntimeError(f"Autopark not set ({ret[0]})")
         else:
-            return self.query("\\Y" + ("%04d" % duration))
+            ret = self.query("\\Y" + ("%04d" % duration))
+            if not f"{duration} minute" in ret:
+                raise RuntimeError(f"Autopark not set ({ret[0]})")
 
-        # TODO: check that it worked
 
-    # TODO: set autopark location
+    def set_park_location(self, az: int, el: int) -> None:
+        ret = self.query(f"\PA{az:03}")
+        if str(az) not in ret[0]:
+            raise RuntimeError("Azimuth park not set")
+
+        ret = self.query(f"\PE{el:03}")
+        if str(el) not in ret[0]:
+            raise RuntimeError("Elevation park not set")
+
+    def get_park_location(self) -> int:
+        ret = self.query(f"\PA")
+        ret = ret[0].split(" ")
+        return (int(ret[2]), int(ret[4]))
+
 
     def load_tle(self, sat: Satellite) -> None:
         self.write("\\#")
-        time.sleep(0.1)
+        time.sleep(0.5)
         self.write(sat.tle.title)
         self.write(sat.tle.line_one)
         self.write(sat.tle.line_two)
-        ret = self.query("\r")
+        self.write("\r")
+        time.sleep(0.5)
+        ret = self.read()
 
-        if "TLE corrupt" in ret:
+        if "TLE corrupt" in ret[0]:
             logging.critical("TLE corrupted on write")
             logging.info(ret)
             raise RuntimeError("TLE corrupted")
-        if "File was truncated" in ret:
+        if "File was truncated" in ret[0]:
             logging.critical("File was truncated due to lack of EEPROM storage.")
             logging.info(ret)
             raise RuntimeError("TLE truncated")
-        if sat.tle.title not in ret[4]:
+        if sat.tle.title not in ret[1]:
             logging.critical("TLE not loaded")
             logging.info(ret)
-            raise RuntimeError("TLE not loaded")
-
-        # TODO: this shouldn't be needed
-        cur_tle = self.read_tles()[0]
-        print(cur_tle)
-        if sat.tle.title != cur_tle.title:
             raise RuntimeError("TLE not loaded")
 
     def read_tles(self) -> TLE:
@@ -301,25 +352,26 @@ class K3NG:
         return tles
 
     def clear_tles(self) -> None:
-        ret = self.write("\\!")
-        # TODO: check return
+        ret = self.query("\\!")
+        if "Erased the TLE file area" not in ret[0]:
+            raise RuntimeError("Failed to clear TLEs")
 
     def get_trackable(self) -> str:
         ret = self.query("\\|")
-        # TODO: parse this shit
         return ret
 
     def get_tracking_status(self) -> str:
         ret = self.query("\\~")
-        # TODO: parse this shit too
         return ret
 
     def select_satellite(self, sat: Satellite) -> None:
         ret = self.query("\\$" + sat.tle.title[0:5])
-        # TODO: parse this shit as well
 
-    def get_next_pass(self) -> str:
-        return self.query("\\%")
+        if "Loading" not in ret[1]:
+            raise RuntimeError("Unable to select satellite")
+
+    def get_next_pass(self, satellite) -> str:
+        return self.query(f"\\%{satellite.name[0:6]}")
 
     def enable_tracking(self) -> None:
         self.query("\\^1")

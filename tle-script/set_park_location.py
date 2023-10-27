@@ -7,16 +7,14 @@ from k3ng import K3NG
 def calibrate_rotator(ser_port: str) -> None:
     rot = K3NG(ser_port)
 
-    print("To calibrate the antenna, use the rotator box to go to limits")
-    input("Please set antenna all the way left (CCW) and down (pointing North)")
-    # TODO FIX TO DO AUTOMATICALLY
-    rot.cal_full_down()
-    rot.cal_full_ccw()
+    rot.get_park_location()
 
-    input("Please set antenna all the way right (CW) and up")
-    rot.cal_full_up()
-    rot.cal_full_cw()
+    print("Position antenna to parked location")
+    input("Press any key when positioned")
+    az = rot.get_azimuth()
+    el = rot.get_elevation()
 
+    rot.set_park_location(int(az), int(el))
     rot.save_to_eeprom()
 
 

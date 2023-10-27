@@ -8,17 +8,18 @@ def program_tle(sat_id: int, ser_port: str, track: bool) -> None:
     rot = K3NG(ser_port)
 
     sat = Satellite(sat_id)
+    rot.set_time()
     rot.load_tle(sat)
     rot.check_time()
-    rot.get_trackable()
     rot.select_satellite(sat)
+    rot.enable_tracking()
+    rot.get_tracking_status()
 
 
 def main():
     parser = ArgumentParser(
-        prog="load_tle.py",
-        description="Acquires a two-line element set (TLE) from a given satellite on SatNOGS, and loads it onto a "
-        "connected Arduino running K3NG. Can be run as a cron script or otherwise.",
+        prog="load_and_track.py",
+        description="Loads a TLE and begins tracking it"
     )
     parser.add_argument(
         "port",

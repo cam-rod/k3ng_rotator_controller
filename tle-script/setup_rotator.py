@@ -9,6 +9,8 @@ def default_config(ser_port: str, location: str) -> None:
     rot.set_loc(location)
     rot.set_time()
 
+    print("Success!")
+
 
 def main():
     parser = ArgumentParser(
