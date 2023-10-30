@@ -18,8 +18,7 @@ def program_tle(sat_id: int, ser_port: str, track: bool) -> None:
 
 def main():
     parser = ArgumentParser(
-        prog="load_and_track.py",
-        description="Loads a TLE and begins tracking it"
+        prog="load_and_track.py", description="Loads a TLE and begins tracking it"
     )
     parser.add_argument(
         "port",

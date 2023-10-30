@@ -13,11 +13,10 @@ def calibrate_rotator(ser_port: str) -> None:
     rot.set_azimuth(0)
     rot.set_elevation(0)
 
+
 def main():
     logging.basicConfig(level=logging.DEBUG)
-    parser = ArgumentParser(
-        prog="cal_rotator.py", description="Assists with calibration of the antenna"
-    )
+    parser = ArgumentParser(prog="go_home", description="Send the rotator to (0,0)")
 
     parser.add_argument(
         "port", help="Serial port connected to an Arduino (typically /dev/ttyACM0)"

@@ -17,7 +17,7 @@ def main():
     logging.basicConfig(level=logging.DEBUG)
 
     parser = ArgumentParser(
-        prog="set_tracking.py", description="Set state of satellite tracking"
+        prog="toggle_tracking.py", description="Set state of satellite tracking"
     )
 
     parser.add_argument(

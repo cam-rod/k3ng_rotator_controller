@@ -1,9 +1,9 @@
 import datetime
 import logging
 import os
+import re
 import sys
 import time
-import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
@@ -33,9 +33,7 @@ class Satellite:
 
     def retrieve_tle(self) -> TLE:
         params = {"format": "json", "norad_cat_id": str(self.id)}
-        resp: requests.Response = requests.get(
-            "https://db.satnogs.org/api/tle/", params=params
-        ).json()
+        resp = requests.get("https://db.satnogs.org/api/tle/", params=params).json()
 
         # Some TLE titles start with "0 " (i.e. "0 ISS") and others don't ("ISS")
         # We opt to be consistent and NOT start with "0 ".
@@ -45,7 +43,7 @@ class Satellite:
             self.tle = TLE(resp[0]["tle0"], resp[0]["tle1"], resp[0]["tle2"])
 
         # K3NG doesn't like special characters
-        self.tle.title = re.sub('[^A-Za-z0-9 ]+','', self.tle.title)
+        self.tle.title = re.sub("[^A-Za-z0-9 ]+", "", self.tle.title)
 
         logging.info(f"Retrieved TLE for NORAD ID {self.id}: {self.tle}")
 
@@ -64,17 +62,12 @@ class K3NG:
             os.R_OK | os.W_OK,
             effective_ids=(os.access in os.supports_effective_ids),
         ):
-            # Attempt to chmod file
             if os.geteuid() != 0:
                 logging.critical(
                     f"Unable to acquire read/write permissions on {self.port}.\n"
                     + "Please change permissions, or run this script as superuser."
                 )
                 sys.exit(1)
-
-            logging.warning(f"Changing permissions on {self.port}")
-            curr_mode: int = os.stat.S_IMODE(os.stat(self.port).st_mode)
-            os.chmod(self.port, curr_mode | os.stat.S_IROTH | os.stat.S_IWOTH)
 
         self.ser = serial.Serial(ser_port, 9600, timeout=1, inter_byte_timeout=0.5)
         self.flush()
@@ -89,19 +82,19 @@ class K3NG:
     #  │                     General Commands                     │
     #  ╰──────────────────────────────────────────────────────────╯
 
-    def read(self) -> str:
+    def read(self) -> list[str]:
         response = []
         line = ""
 
         while self.ser.in_waiting > 0:
             time.sleep(RECV_DELAY)
             ch = self.ser.read()
-            ch = ch.decode('utf-8')
-            if ch == '\r' or ch == '\n':
+            ch_decoded = ch.decode("utf-8")
+            if ch_decoded == "\r" or ch_decoded == "\n":
                 response.append(line)
                 line = ""
             else:
-                line += ch
+                line += ch_decoded
 
         response = list(filter(None, response))
 
@@ -118,7 +111,7 @@ class K3NG:
         time.sleep(0.2)
         self.ser.readline()
 
-    def query(self, cmd) -> str:
+    def query(self, cmd) -> list[str]:
         self.write(cmd)
         time.sleep(0.2)
         return self.read()
@@ -129,7 +122,7 @@ class K3NG:
             raise ValueError("Invalid extended command")
 
         self.write("\\?" + cmd)
-        
+
         time.sleep(0.2)
 
         try:
@@ -146,7 +139,7 @@ class K3NG:
 
         return resp[6:]
 
-    def flush(self) -> str:
+    def flush(self) -> None:
         self.write("\r")
         self.ser.flush()
         self.ser.reset_input_buffer()
@@ -159,7 +152,7 @@ class K3NG:
         retval = self.query_extended("CV")
         return retval
 
-    def get_time(self) -> datetime:
+    def get_time(self) -> datetime.datetime:
         retval = self.query("\\C")
         return datetime.datetime.fromisoformat(retval[0])
 
@@ -174,8 +167,8 @@ class K3NG:
             raise ValueError("Invalid time length")
 
         ret = self.query("\\O" + time)
-        ret = ' '.join(ret[0].split(' ')[3:5])
-        ret_time = datetime.datetime.fromisoformat(ret)
+        ret_split = " ".join(ret[0].split(" ")[3:5])
+        ret_time = datetime.datetime.fromisoformat(ret_split)
 
         if abs(ret_time - current_time) > datetime.timedelta(seconds=10):
             raise ValueError("Time did not save!")
@@ -188,7 +181,6 @@ class K3NG:
 
         if abs(ret_time - current_time) > datetime.timedelta(seconds=10):
             logging.warning("Time difference greater than 10 seconds!")
-
 
     def get_loc(self) -> str:
         # TODO: make this be able to return coords or grid
@@ -257,17 +249,21 @@ class K3NG:
     #  │                       Calibration                        │
     #  ╰──────────────────────────────────────────────────────────╯
 
-    def cal_full_up(self) -> None:
+    def cal_full_up(self) -> int:
         ret = self.query_extended("EF")
+        return int(ret)
 
-    def cal_full_down(self) -> None:
+    def cal_full_down(self) -> int:
         ret = self.query_extended("EO")
+        return int(ret)
 
-    def cal_full_cw(self) -> None:
+    def cal_full_cw(self) -> int:
         ret = self.query_extended("AF")
+        return int(ret)
 
-    def cal_full_ccw(self) -> None:
+    def cal_full_ccw(self) -> int:
         ret = self.query_extended("AO")
+        return int(ret)
 
     #  ╭──────────────────────────────────────────────────────────╮
     #  │                         Features                         │
@@ -278,43 +274,41 @@ class K3NG:
         if "Parking" not in ret[0]:
             raise RuntimeError("Not parking")
 
-
-
     def get_autopark(self) -> int:
         ret = self.query("\\Y")
-        if ("Autopark is off" in ret[0]):
+        if "Autopark is off" in ret[0]:
             return 0
         else:
             return int(ret[0].split()[4])
 
-    # WARNING: autopark updates itself every few seconds. ADC drift may cause the rotator to slightly adjust itself between updates, meaning this parked in location (mostly), but not in lack of motion. 
+    # WARNING: autopark updates itself every few seconds.
+    # ADC drift may cause the rotator to slightly adjust itself between updates,
+    #   meaning this parked in location (mostly), but not in lack of motion.
     def set_autopark(self, duration: int) -> None:
         # set to 0 for disable
         # duration in mins
         if duration == 0:
-            ret = str(self.query("\\Y0"))
-            if not "off" in ret:
+            ret = self.query("\\Y0")
+            if "off" not in ret[0]:
                 raise RuntimeError(f"Autopark not set ({ret[0]})")
         else:
             ret = self.query("\\Y" + ("%04d" % duration))
-            if not f"{duration} minute" in ret:
+            if f"{duration} minute" not in ret[0]:
                 raise RuntimeError(f"Autopark not set ({ret[0]})")
 
-
     def set_park_location(self, az: int, el: int) -> None:
-        ret = self.query(f"\PA{az:03}")
+        ret = self.query(f"\\PA{az:03}")
         if str(az) not in ret[0]:
             raise RuntimeError("Azimuth park not set")
 
-        ret = self.query(f"\PE{el:03}")
+        ret = self.query(f"\\PE{el:03}")
         if str(el) not in ret[0]:
             raise RuntimeError("Elevation park not set")
 
-    def get_park_location(self) -> int:
-        ret = self.query(f"\PA")
-        ret = ret[0].split(" ")
-        return (int(ret[2]), int(ret[4]))
-
+    def get_park_location(self) -> tuple[int, int]:
+        ret = self.query("\\PA")
+        ret_split = ret[0].split(" ")
+        return (int(ret_split[2]), int(ret_split[4]))
 
     def load_tle(self, sat: Satellite) -> None:
         self.write("\\#")
@@ -339,7 +333,7 @@ class K3NG:
             logging.info(ret)
             raise RuntimeError("TLE not loaded")
 
-    def read_tles(self) -> TLE:
+    def read_tles(self) -> list[TLE]:
         ret = self.query("\\@")
 
         tles = []
@@ -356,11 +350,11 @@ class K3NG:
         if "Erased the TLE file area" not in ret[0]:
             raise RuntimeError("Failed to clear TLEs")
 
-    def get_trackable(self) -> str:
+    def get_trackable(self) -> list[str]:
         ret = self.query("\\|")
         return ret
 
-    def get_tracking_status(self) -> str:
+    def get_tracking_status(self) -> list[str]:
         ret = self.query("\\~")
         return ret
 
@@ -370,7 +364,7 @@ class K3NG:
         if "Loading" not in ret[1]:
             raise RuntimeError("Unable to select satellite")
 
-    def get_next_pass(self, satellite) -> str:
+    def get_next_pass(self, satellite) -> list[str]:
         return self.query(f"\\%{satellite.name[0:6]}")
 
     def enable_tracking(self) -> None:

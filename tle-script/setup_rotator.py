@@ -14,9 +14,7 @@ def default_config(ser_port: str, location: str) -> None:
 
 def main():
     parser = ArgumentParser(
-        prog="load_tle.py",
-        description="Acquires a two-line element set (TLE) from a given satellite on SatNOGS, and loads it onto a "
-        "connected Arduino running K3NG. Can be run as a cron script or otherwise.",
+        prog="setup_rotator.py", description="Sets location and time of the rotator"
     )
     parser.add_argument(
         "port",

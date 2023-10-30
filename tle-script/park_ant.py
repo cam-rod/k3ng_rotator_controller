@@ -7,13 +7,15 @@ from k3ng import K3NG
 def calibrate_rotator(ser_port: str) -> None:
     rot = K3NG(ser_port)
 
+    print(f"Sending antenna to {rot.get_park_location()}")
+
     rot.park()
 
 
 def main():
     logging.basicConfig(level=logging.DEBUG)
     parser = ArgumentParser(
-        prog="cal_rotator.py", description="Assists with calibration of the antenna"
+        prog="park_ant", description="Sends antenna to park location"
     )
 
     parser.add_argument(

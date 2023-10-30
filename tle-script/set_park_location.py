@@ -7,12 +7,10 @@ from k3ng import K3NG
 def calibrate_rotator(ser_port: str) -> None:
     rot = K3NG(ser_port)
 
-    rot.get_park_location()
-
-    print("Position antenna to parked location")
-    input("Press any key when positioned")
     az = rot.get_azimuth()
     el = rot.get_elevation()
+
+    input(f"Setting park to ({az}, {el}). Are you sure?")
 
     rot.set_park_location(int(az), int(el))
     rot.save_to_eeprom()
@@ -21,7 +19,8 @@ def calibrate_rotator(ser_port: str) -> None:
 def main():
     logging.basicConfig(level=logging.DEBUG)
     parser = ArgumentParser(
-        prog="cal_rotator.py", description="Assists with calibration of the antenna"
+        prog="set_park_location",
+        description="Sets current location to park location, and save it",
     )
 
     parser.add_argument(

@@ -17,8 +17,8 @@ def program_tle(sat_id: int, ser_port: str, track: bool) -> None:
 def main():
     parser = ArgumentParser(
         prog="load_tle.py",
-        description="Acquires a two-line element set (TLE) from a given satellite on SatNOGS, and loads it onto a "
-        "connected Arduino running K3NG. Can be run as a cron script or otherwise.",
+        description="Acquires a two-line element set (TLE) from a given satellite on SatNOGS,"
+        " and loads it onto a connected Arduino running K3NG.",
     )
     parser.add_argument(
         "port",
