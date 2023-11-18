@@ -27,9 +27,12 @@ class Satellite:
     id: int
     tle: TLE
 
-    def __init__(self, sat_id):
+    def __init__(self, sat_id: int, tle: Optional[TLE] = None):
         self.id = sat_id
-        self.retrieve_tle()
+        if tle is None:
+            self.retrieve_tle()
+        else:
+            self.tle = tle
 
     def retrieve_tle(self) -> TLE:
         params = {"format": "json", "norad_cat_id": str(self.id)}
@@ -42,8 +45,9 @@ class Satellite:
         else:
             self.tle = TLE(resp[0]["tle0"], resp[0]["tle1"], resp[0]["tle2"])
 
-        # K3NG doesn't like special characters
+        # K3NG doesn't like special characters or spaces
         self.tle.title = re.sub("[^A-Za-z0-9 ]+", "", self.tle.title)
+        self.tle.title = self.tle.title.replace(" ", "")
 
         logging.info(f"Retrieved TLE for NORAD ID {self.id}: {self.tle}")
 
@@ -208,14 +212,14 @@ class K3NG:
     def get_elevation(self) -> float:
         ret = self.query_extended("EL")
         # replace is to accomodate for a quirk in reporting at EL=0
-        return float(ret.replace("0-0.", "00."))
+        return float(ret.replace("0-0.", "00.").strip("0"))
 
     def set_elevation(self, el: float) -> None:
         self.query_extended("GE" + ("%05.2f" % el))
 
     def get_azimuth(self) -> float:
         ret = self.query_extended("AZ")
-        return float(ret)
+        return float(ret.strip("0"))
 
     def set_azimuth(self, az: float) -> None:
         self.query_extended("GA" + ("%05.2f" % az))
