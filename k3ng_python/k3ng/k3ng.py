@@ -324,11 +324,11 @@ class K3NG:
         time.sleep(0.5)
         ret = self.read()
 
-        if "TLE corrupt" in ret[0]:
+        if "corrupt" in ret[0]:
             logging.critical("TLE corrupted on write")
             logging.info(ret)
             raise RuntimeError("TLE corrupted")
-        if "File was truncated" in ret[0]:
+        if "truncated" in ret[0]:
             logging.critical("File was truncated due to lack of EEPROM storage.")
             logging.info(ret)
             raise RuntimeError("TLE truncated")
@@ -378,3 +378,13 @@ class K3NG:
     def disable_tracking(self) -> None:
         self.query("\\^0")
         # samesies
+
+    def load_and_track(self, sat_id: int) -> None:
+        """Helper to load and begin tracking a satellite"""
+        sat = Satellite(sat_id)
+        self.set_time()
+        self.load_tle(sat)
+        self.check_time()
+        self.select_satellite(sat)
+        self.enable_tracking()
+        self.get_tracking_status()

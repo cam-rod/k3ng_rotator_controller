@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "k3ng_python"
+name = "k3ng"
 version = "0.1.0"
 description = ""
 authors = ["Cameron Rodriguez <rod.cam2014+dev@gmail.com>", "Reid Sox-Harris <reid@soxharris.com>"]
