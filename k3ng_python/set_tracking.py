@@ -1,7 +1,7 @@
 import logging
 from argparse import ArgumentParser
 
-from k3ng_python import K3NG
+from k3ng import K3NG
 
 
 def toggle_tracking(rot: K3NG) -> None:
