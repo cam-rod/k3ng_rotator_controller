@@ -1,0 +1,3 @@
+[submodule "k3ng-rotator-python"]
+	path = k3ng-rotator-python
+	url = https://github.com/eosti/k3ng-rotator-python
