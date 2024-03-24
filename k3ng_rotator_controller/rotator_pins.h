@@ -11,7 +11,7 @@
 /* azimuth pins --------------------- (use just the azimuth pins for an azimuth-only rotator) */
 
 #define rotate_cw 6              // goes high to activate rotator R (CW) rotation - pin 1 on Yaesu connector
-#define rotate_ccw 7             // goes high to activate rotator L (CCW) rotation - pin 2 on Yaesu connector
+#define rotate_ccw 8             // goes high to activate rotator L (CCW) rotation - pin 2 on Yaesu connector
 #define rotate_cw_ccw  0         // goes high for both CW and CCW rotation
 #define rotate_cw_pwm 0          // optional - PWM CW output - set to 0 to disable (must be PWM capable pin)
 #define rotate_ccw_pwm 0         // optional - PWM CCW output - set to 0 to disable (must be PWM capable pin)
@@ -31,14 +31,14 @@
 #define button_stop 0            // connect to momentary switch (ground on button press) for preset stop (set to 0 to disable or for preset automatic start)
 #define rotation_indication_pin 0
 #define blink_led 0
-#define az_stepper_motor_pulse 0
+#define az_stepper_motor_pulse 44
 #define az_rotation_stall_detected 0
 
 
 
 /*----------- elevation pins --------------*/
 #ifdef FEATURE_ELEVATION_CONTROL
-  #define rotate_up 8               // goes high to activate rotator elevation up
+  #define rotate_up 7               // goes high to activate rotator elevation up
   #define rotate_down 9             // goes high to activate rotator elevation down
   #define rotate_up_or_down 0       // goes high when elevation up or down is activated
   #define rotate_up_pwm 0           // optional - PWM UP output - set to 0 to disable (must be PWM capable pin)
